@@ -106,15 +106,18 @@ There are two ways you implement streaming in Next.js:
 2. Markup : For specific components, with `<Suspense>`.
 
 #### Streaming a whole page with `loading.tsx`
+
 In the `/app/dashboard` folder, create a new file called `loading.tsx`:
 
 A few things are happening here:
+
 1. `loading.tsx` is a special Next.js file built on top of Suspense, it allows you to create fallback UI to show as a replacement while page content loads.
 2. Since <SideNav> is static, it's shown immediately. The user can interact with <SideNav> while the dynamic content is loading.
 3. The user doesn't have to wait for the page to finish loading before navigating away (this is called interruptable navigation).
-Congratulations! You've just implemented streaming.
+   Congratulations! You've just implemented streaming.
 
 #### Fixing the loading skeleton bug with route groups
+
 Right now, your loading skeleton will apply to the invoices and customers pages as well.
 
 Since `loading.tsx` is a level higher than `/invoices/page.tsx` and `/customers/page.tsx` in the file system, it's also applied to those pages.
@@ -122,3 +125,85 @@ Since `loading.tsx` is a level higher than `/invoices/page.tsx` and `/customers/
 We can change this with [Route Groups](https://nextjs.org/docs/app/building-your-application/routing/route-groups). Create a new folder called `/(overview)` inside the dashboard folder. Then, move your `loading.tsx` and `page.tsx` files inside the folder:
 Now, the `loading.tsx` file will only apply to your dashboard overview page.
 Route groups allow you to organize files into logical groups without affecting the URL path structure. When you create a new folder using parentheses `()`, the name won't be included in the URL path. So `/dashboard/(overview)/page.tsx` becomes `/dashboard`.
+
+## Chapter 9 - What is streaming?
+
+Streaming is a data transfer technique that allows you to break down a route into smaller "chunks" and progressively stream them from the server to the client as they become ready.
+
+Streaming works well with React's component model, as each component can be considered a chunk.
+
+There are two ways you implement streaming in Next.js:
+
+1. At the page level, with the `loading.tsx` file.
+2. For specific components, with `<Suspense>`.
+
+## Chapter 10 - Partial Prerendering (Optional)
+
+### Combining Static and Dynamic Content
+
+Currently, if you call a dynamic function inside your route (e.g. `noStore()`, `cookies()`, etc), your entire route becomes dynamic.
+However, most routes are not fully static or dynamic. You may have a route that has both static and dynamic content.
+
+### What is Partial Prerendering?
+
+Next.js 14 contains a preview of Partial Prerendering – an experimental feature that allows you to render a route with a static loading shell, while keeping some parts dynamic. In other words, you can isolate the dynamic parts of a route. For example:
+When a user visits a route:
+
+- A static route shell is served, ensuring a fast initial load.
+- The shell leaves holes where dynamic content will load in asynchronous.
+- The async holes are streamed in parallel, reducing the overall load time of the page.
+  This approach allows for faster rendering of certain parts.
+
+## Chapter 11 - Adding Search and Pagination
+
+When a user searches for an invoice on the client, the URL params will be updated, data will be fetched on the server, and the table will re-render on the server with the new data.
+
+### Why use URL search params?
+
+We will be using URL search params to manage the search state. This pattern may be new if you're used to doing it with client side state.
+There are a couple of benefits of implementing search with URL params:
+
+- **Bookmarkable and Shareable URLs:** Since the search parameters are in the URL, users can bookmark the current state of the application, including their search queries and filters, for future reference or sharing.
+- **Server-Side Rendering and Initial Load:** URL parameters can be directly consumed on the server to render the initial state, making it easier to handle server rendering.
+- **Analytics and Tracking:** Having search queries and filters directly in the URL makes it easier to track user behavior without requiring additional client-side logic.
+
+### Adding the search functionality
+
+These are the Next.js client hooks that you'll use to implement the search functionality:
+
+- `useSearchParams`- Allows you to access the parameters of the current URL. For example, the search params for this URL `/dashboard/invoices?page=1&query=pending` would look like this: `{page: '1', query: 'pending'}`.
+- `usePathname` - Lets you read the current URL's pathname. For example, for the route `/dashboard/invoices`, `usePathname` would return `'/dashboard/invoices'`.
+- `useRouter` - Enables navigation between routes within client components programmatically. There are [multiple methods](https://nextjs.org/docs/app/api-reference/functions/use-router#userouter) you can use.
+
+Here's a quick overview of the implementation steps:
+
+1. Capture the user's input.
+2. Update the URL with the search params.
+3. Keep the URL in sync with the input field.
+4. Update the table to reflect the search query.
+
+##### 1. Capture the user's input
+
+Go into the `<Search>` Component (`/app/ui/search.tsx`), and you'll notice:
+
+- `"use client"` - This is a Client Component, which means you can use event listeners and hooks.
+- `<input>` - This is the search input.
+
+Create a new `handleSearch` function, and add an `onChange` listener to the `<input>` element. `onChange` will invoke `handleSearch` whenever the input value changes.
+The URL is updated without reloading the page, thanks to Next.js's client-side navigation (which you learned about in the chapter on navigating between pages.
+
+#### Best practice: Debouncing
+
+**Debouncing** is a programming practice that limits the rate at which a function can fire. In our case, you only want to query the database when the user has stopped typing.
+
+##### How Debouncing Works:
+
+1. **Trigger Event:** When an event that should be debounced (like a keystroke in the search box) occurs, a timer starts.
+2. **Wait:** If a new event occurs before the timer expires, the timer is reset.
+3. **Execution:** If the timer reaches the end of its countdown, the debounced function is executed.
+   You can implement debouncing in a few ways, including manually creating your own debounce function. To keep things simple, we'll use a library called [use-debounce](https://www.npmjs.com/package/use-debounce).
+   Install `use-debounce`:
+
+```bash
+npm i use-debounce
+```
