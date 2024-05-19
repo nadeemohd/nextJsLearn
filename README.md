@@ -243,3 +243,39 @@ Next.js has a [Client-side Router Cache](https://nextjs.org/docs/app/building-yo
 
 #### Dynamic Routes
 When you don't know the exact segment names ahead of time and want to create routes from dynamic data, you can use Dynamic Segments that are filled in at request time or [prerendered](https://nextjs.org/docs/app/building-your-application/routing/dynamic-routes#generating-static-params) at build time.
+
+## Chapter 13 - Handling Errors
+
+### Adding try/catch to Server Actions
+Seeing these errors are helpful while developing as you can catch any potential problems early. However, you also want to show errors to the user to avoid an abrupt failure and allow your application to continue running.
+
+This is where Next.js [error.tsx](https://nextjs.org/docs/app/api-reference/file-conventions/error) file comes in.
+
+### Handling all errors with `error.tsx`
+The `error.tsx` file can be used to define a UI boundary for a route segment. It serves as a **catch-all** for unexpected errors and allows you to display a fallback UI to your users.
+
+There are a few things you'll notice after implementing the errror.tsx error to your project:
+
+- **"use client"** - `error.tsx` needs to be a Client Component.
+- It accepts two props:
+  - `error`: This object is an instance of JavaScript's native [Error](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Error) object.
+  - `reset`: This is a function to reset the error boundary. When executed, the function will try to re-render the route segment.
+
+### Handling 404 errors with the `notFound` function
+Another way you can handle errors gracefully is by using the `notFound` function. While `error.tsx` is useful for catching **all** errors,  notFound` can be used when you try to fetch a resource that doesn't exist.
+
+Use a fake UUID that doesn't exist in your database.
+You'll immediately see `error.tsx` kicks in because this is a child route of `/invoices` where `error.tsx` is defined.
+
+However, if you want to be more specific, you can show a 404 error to tell the user the resource they're trying to access hasn't been found.
+
+You can confirm that the resource hasn't been found by going into your `fetchInvoiceById` function in `data.ts`, and console logging the returned `invoice`:
+>**Note**: `notFound` will take precedence over `error.tsx`,so you can reach out for it when you want to handle more specific errors!
+
+### Further reading
+To learn more about error handling in Next.js, check out the following documentation:
+
+- [Error Handling](https://nextjs.org/docs/app/building-your-application/routing/error-handling)
+- [`error.js` API Reference](https://nextjs.org/docs/app/api-reference/file-conventions/error)
+- [`notFound()` API Reference](https://nextjs.org/docs/app/api-reference/functions/not-found)
+- [`not-found.js` API Reference](https://nextjs.org/docs/app/api-reference/file-conventions/not-found)
