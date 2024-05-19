@@ -279,3 +279,53 @@ To learn more about error handling in Next.js, check out the following documenta
 - [`error.js` API Reference](https://nextjs.org/docs/app/api-reference/file-conventions/error)
 - [`notFound()` API Reference](https://nextjs.org/docs/app/api-reference/functions/not-found)
 - [`not-found.js` API Reference](https://nextjs.org/docs/app/api-reference/file-conventions/not-found)
+
+## Chapter 14 - Improving Accessibility
+### What is accessibility?
+Accessibility refers to designing and implementing web applications that everyone can use, including those with disabilities. It's a vast topic that covers many areas, such as keyboard navigation, semantic HTML, images, colors, videos, etc.
+
+While we won't go in-depth into accessibility in this course, we'll discuss the accessibility features available in Next.js and some common practices to make your applications more accessible.
+
+> If you'd like to learn more about accessibility, we recommend the [Learn Accessibility](https://web.dev/learn/accessibility/) course by [web.dev](https://web.dev/).
+
+### Using the ESLint accessibility plugin in Next.js
+By default, Next.js includes the [eslint-plugin-jsx-a11y](https://www.npmjs.com/package/eslint-plugin-jsx-a11y) plugin to help catch accessibility issues early. For example, this plugin warns if you have images without `alt` text, use the `aria-*` and `role` attributes incorrectly, and more.
+
+
+Add `next lint` as a script in your `package.json` file:
+To run lint use the command in prompt
+```bash
+npm run lint
+```
+If no error or warning found you should see the following warning:
+```bash
+✔ No ESLint warnings or errors
+```
+
+### Improving form accessibility
+There are three things we're already doing to improve accessibility in our forms:
+
+- **Semantic HTML**: Using semantic elements (`<input>`, `<option>`, etc) instead of `<div>`. This allows assistive technologies (AT) to focus on the input elements and provide appropriate contextual information to the user, making the form easier to navigate and understand.
+- **Labelling**: Including `<label>` and the `htmlFor` attribute ensures that each form field has a descriptive text label. This improves AT support by providing context and also enhances usability by allowing users to click on the label to focus on the corresponding input field.
+- **Focus Outline**: The fields are properly styled to show an outline when they are in focus. This is critical for accessibility as it visually indicates the active element on the page, helping both keyboard and screen reader users to understand where they are on the form. You can verify this by pressing `tab`.
+These practices lay a good foundation for making your forms more accessible to many users. However, they don't address **form validation** and **errors**.
+
+### Form validation
+Submit an empty form. And you get an error! This is because you're sending empty form values to your Server Action. You can prevent this by validating your form on the client or the server.
+
+#### Client-Side validation
+There are a couple of ways you can validate forms on the client. The simplest would be to rely on the form validation provided by the browser by adding the `required` attribute to the `<input>` and `<select>` elements in your forms.
+
+#### Server-Side validation
+
+By validating forms on the server, you can:
+- Ensure your data is in the expected format before sending it to your database.
+- Reduce the risk of malicious users bypassing client-side validation.
+- Have one source of truth for what is considered *valid* data.
+In your `create-form.tsx` component, import the `useFormState` hook from `react-dom`. Since `useFormState` is a hook, you will need to turn your form into a Client Component using `"use client"` directive:
+
+Inside your Form Component, the `useFormState` hook:
+
+Takes two arguments: `(action, initialState)`.
+Returns two values: `[state, dispatch]` - the form state, and a dispatch function (similar to [useReducer](https://react.dev/reference/react/useReducer))
+Pass your `createInvoice` action as an argument of `useFormState`, and inside your `<form action={}>` attribute, call `dispatch`.
