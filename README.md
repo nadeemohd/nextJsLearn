@@ -329,3 +329,85 @@ Inside your Form Component, the `useFormState` hook:
 Takes two arguments: `(action, initialState)`.
 Returns two values: `[state, dispatch]` - the form state, and a dispatch function (similar to [useReducer](https://react.dev/reference/react/useReducer))
 Pass your `createInvoice` action as an argument of `useFormState`, and inside your `<form action={}>` attribute, call `dispatch`.
+
+## Chapter 15 - Adding Authentication
+
+### What is authentication?
+Authentication is a key part of many web applications today. It's how a system checks if the user is who they say they are.
+
+A secure website often uses multiple ways to check a user's identity. For instance, after entering your username and password, the site may send a verification code to your device or use an external app like Google Authenticator. This 2-factor authentication (2FA) helps increase security. Even if someone learns your password, they can't access your account without your unique token.
+
+### Authentication vs. Authorization
+In web development, authentication and authorization serve different roles:
+
+- **Authentication** is about making sure the user is who they say they are. You're proving your identity with something you have like a username and password.
+- **Authorization** is the next step. Once a user's identity is confirmed, authorization decides what parts of the application they are allowed to use.
+
+So, authentication checks who you are, and authorization determines what you can do or access in the application.
+
+### NextAuth.js
+We will be using [NextAuth.js](https://nextjs.authjs.dev/) to add authentication to your application. NextAuth.js abstracts away much of the complexity involved in managing sessions, sign-in and sign-out, and other aspects of authentication. While you can manually implement these features, the process can be time-consuming and error-prone. NextAuth.js simplifies the process, providing a unified solution for auth in Next.js applications.
+
+### Setting up NextAuth.js
+Install NextAuth.js by running the following command in your terminal:
+```bash
+npm install next-auth@beta
+```
+Here, you're installing the beta version of NextAuth.js, which is compatible with Next.js 14.
+Next, generate a secret key for your application. This key is used to encrypt cookies, ensuring the security of user sessions. You can do this by running the following command in your terminal:
+```bash
+openssl rand -base64 32
+```
+Then, in your .env file, add your generated key to the AUTH_SECRET variable:
+``` json
+AUTH_SECRET=your-secret-key
+```
+For auth to work in production, you'll need to update your environment variables in your Vercel project too. Check out this [guide](https://vercel.com/docs/projects/environment-variables) on how to add environment variables on Vercel.
+
+#### Adding the pages option
+Create an `auth.config.ts` file at the root of our project that exports an `authConfig` object. This object will contain the configuration options for NextAuth.js. For now, it will only contain the `pages` option:
+``` javascript
+import type { NextAuthConfig } from 'next-auth';
+ 
+export const authConfig = {
+  pages: {
+    signIn: '/login',
+  },
+};
+```
+You can use the `pages` option to specify the route for custom sign-in, sign-out, and error pages. This is not required, but by adding `signIn: '/login'` into our `pages` option, the user will be redirected to our custom login page, rather than the NextAuth.js default page.
+
+#### Protecting your routes with Next.js Middleware
+Next, add the logic to protect your routes. This will prevent users from accessing the dashboard pages unless they are logged in.
+In file /auth.config.ts
+The authorized callback is used to verify if the request is authorized to access a page via Next.js Middleware. It is called before a request is completed, and it receives an object with the auth and request properties. The auth property contains the user's session, and the request property contains the incoming request.
+
+The providers option is an array where you list different login options. For now, it's an empty array to satisfy NextAuth config. You'll learn more about it in the Adding the Credentials provider section.
+
+Next, you will need to import the authConfig object into a Middleware file. In the root of your project, create a file called middleware.ts and paste the following code:
+In middleware.ts file you are:
+Here you're initializing NextAuth.js with the authConfig object and exporting the auth property. You're also using the matcher option from Middleware to specify that it should run on specific paths.
+
+The advantage of employing Middleware for this task is that the protected routes will not even start rendering until the Middleware verifies the authentication, enhancing both the security and performance of your application.
+
+#### Password hashing
+It's good practice to hash passwords before storing them in a database. Hashing converts a password into a fixed-length string of characters, which appears random, providing a layer of security even if the user's data is exposed.
+
+In your seed.js file, you used a package called bcrypt to hash the user's password before storing it in the database. You will use it again later in this chapter to compare that the password entered by the user matches the one in the database. However, you will need to create a separate file for the bcrypt package. This is because bcrypt relies on Node.js APIs not available in Next.js Middleware.
+
+Create a new file called auth.ts that spreads your authConfig object:
+
+#### Adding the Credentials provider
+Next, you will need to add the `providers` option for NextAuth.js. `providers` is an array where you list different login options such as Google or GitHub. For this course, we will focus on using the [Credentials provider](https://authjs.dev/getting-started/providers/credentials-tutorial) only.
+
+The Credentials provider allows users to log in with a username and a password.
+
+##### Good to know:
+
+Although we're using the Credentials provider, it's generally recommended to use alternative providers such as [OAuth](https://authjs.dev/getting-started/providers/oauth-tutorial) or [email](https://authjs.dev/getting-started/providers/email-tutorial) providers. See the [NextAuth.js docs](https://authjs.dev/getting-started/providers) for a full list of options.
+
+#### Adding the sign in functionality
+You can use the `authorize` function to handle the authentication logic. Similarly to Server Actions, you can use `zod` to validate the email and password before checking if the user exists in the database:
+
+#### Updating the login form
+Now you need to connect the auth logic with your login form. In your `actions.ts` file, create a new action called `authenticate`. This action should import the `signIn` function from `auth.ts`:
