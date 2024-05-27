@@ -207,3 +207,286 @@ The URL is updated without reloading the page, thanks to Next.js's client-side n
 ```bash
 npm i use-debounce
 ```
+
+## Chapter 12 - Mutating Data
+
+### What are Server Actions?
+
+React Server Actions allow you to run asynchronous code directly on the server. They eliminate the need to create API endpoints to mutate your data. Instead, you write asynchronous functions that execute on the server and can be invoked from your Client or Server Components.
+
+Security is a top priority for web applications, as they can be vulnerable to various threats. This is where Server Actions come in. They offer an effective security solution, protecting against different types of attacks, securing your data, and ensuring authorized access. Server Actions achieve this through techniques like POST requests, encrypted closures, strict input checks, error message hashing, and host restrictions, all working together to significantly enhance your app's safety.
+
+### Using forms with Server Actions
+
+In React, you can use the `action` attribute in the `<form>` element to invoke actions. The action will automatically receive the native [FormData](https://developer.mozilla.org/en-US/docs/Web/API/FormData) object, containing the captured data.
+
+```Javascript
+// Server Component
+export default function Page() {
+  // Action
+  async function create(formData: FormData) {
+    'use server';
+
+    // Logic to mutate data...
+  }
+
+  // Invoke the action using the "action" attribute
+  return <form action={create}>...</form>;
+}
+```
+An advantage of invoking a Server Action within a Server Component is progressive enhancement - forms work even if JavaScript is disabled on the client.
+
+### Next.js with Server Actions
+Server Actions are also deeply integrated with Next.js [caching](https://nextjs.org/docs/app/building-your-application/caching). When a form is submitted through a Server Action, not only can you use the action to mutate data, but you can also revalidate the associated cache using APIs like `revalidatePath` and `revalidateTag`.
+
+Next.js has a [Client-side Router Cache](https://nextjs.org/docs/app/building-your-application/caching#router-cache) that stores the route segments in the user's browser for a time. Along with [prefetching](https://nextjs.org/docs/app/building-your-application/routing/linking-and-navigating#1-prefetching), this cache ensures that users can quickly navigate between routes while reducing the number of requests made to the server.
+
+#### Dynamic Routes
+When you don't know the exact segment names ahead of time and want to create routes from dynamic data, you can use Dynamic Segments that are filled in at request time or [prerendered](https://nextjs.org/docs/app/building-your-application/routing/dynamic-routes#generating-static-params) at build time.
+
+## Chapter 13 - Handling Errors
+
+### Adding try/catch to Server Actions
+Seeing these errors are helpful while developing as you can catch any potential problems early. However, you also want to show errors to the user to avoid an abrupt failure and allow your application to continue running.
+
+This is where Next.js [error.tsx](https://nextjs.org/docs/app/api-reference/file-conventions/error) file comes in.
+
+### Handling all errors with `error.tsx`
+The `error.tsx` file can be used to define a UI boundary for a route segment. It serves as a **catch-all** for unexpected errors and allows you to display a fallback UI to your users.
+
+There are a few things you'll notice after implementing the errror.tsx error to your project:
+
+- **"use client"** - `error.tsx` needs to be a Client Component.
+- It accepts two props:
+  - `error`: This object is an instance of JavaScript's native [Error](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Error) object.
+  - `reset`: This is a function to reset the error boundary. When executed, the function will try to re-render the route segment.
+
+### Handling 404 errors with the `notFound` function
+Another way you can handle errors gracefully is by using the `notFound` function. While `error.tsx` is useful for catching **all** errors,  notFound` can be used when you try to fetch a resource that doesn't exist.
+
+Use a fake UUID that doesn't exist in your database.
+You'll immediately see `error.tsx` kicks in because this is a child route of `/invoices` where `error.tsx` is defined.
+
+However, if you want to be more specific, you can show a 404 error to tell the user the resource they're trying to access hasn't been found.
+
+You can confirm that the resource hasn't been found by going into your `fetchInvoiceById` function in `data.ts`, and console logging the returned `invoice`:
+>**Note**: `notFound` will take precedence over `error.tsx`,so you can reach out for it when you want to handle more specific errors!
+
+### Further reading
+To learn more about error handling in Next.js, check out the following documentation:
+
+- [Error Handling](https://nextjs.org/docs/app/building-your-application/routing/error-handling)
+- [`error.js` API Reference](https://nextjs.org/docs/app/api-reference/file-conventions/error)
+- [`notFound()` API Reference](https://nextjs.org/docs/app/api-reference/functions/not-found)
+- [`not-found.js` API Reference](https://nextjs.org/docs/app/api-reference/file-conventions/not-found)
+
+## Chapter 14 - Improving Accessibility
+### What is accessibility?
+Accessibility refers to designing and implementing web applications that everyone can use, including those with disabilities. It's a vast topic that covers many areas, such as keyboard navigation, semantic HTML, images, colors, videos, etc.
+
+While we won't go in-depth into accessibility in this course, we'll discuss the accessibility features available in Next.js and some common practices to make your applications more accessible.
+
+> If you'd like to learn more about accessibility, we recommend the [Learn Accessibility](https://web.dev/learn/accessibility/) course by [web.dev](https://web.dev/).
+
+### Using the ESLint accessibility plugin in Next.js
+By default, Next.js includes the [eslint-plugin-jsx-a11y](https://www.npmjs.com/package/eslint-plugin-jsx-a11y) plugin to help catch accessibility issues early. For example, this plugin warns if you have images without `alt` text, use the `aria-*` and `role` attributes incorrectly, and more.
+
+
+Add `next lint` as a script in your `package.json` file:
+To run lint use the command in prompt
+```bash
+npm run lint
+```
+If no error or warning found you should see the following warning:
+```bash
+✔ No ESLint warnings or errors
+```
+
+### Improving form accessibility
+There are three things we're already doing to improve accessibility in our forms:
+
+- **Semantic HTML**: Using semantic elements (`<input>`, `<option>`, etc) instead of `<div>`. This allows assistive technologies (AT) to focus on the input elements and provide appropriate contextual information to the user, making the form easier to navigate and understand.
+- **Labelling**: Including `<label>` and the `htmlFor` attribute ensures that each form field has a descriptive text label. This improves AT support by providing context and also enhances usability by allowing users to click on the label to focus on the corresponding input field.
+- **Focus Outline**: The fields are properly styled to show an outline when they are in focus. This is critical for accessibility as it visually indicates the active element on the page, helping both keyboard and screen reader users to understand where they are on the form. You can verify this by pressing `tab`.
+These practices lay a good foundation for making your forms more accessible to many users. However, they don't address **form validation** and **errors**.
+
+### Form validation
+Submit an empty form. And you get an error! This is because you're sending empty form values to your Server Action. You can prevent this by validating your form on the client or the server.
+
+#### Client-Side validation
+There are a couple of ways you can validate forms on the client. The simplest would be to rely on the form validation provided by the browser by adding the `required` attribute to the `<input>` and `<select>` elements in your forms.
+
+#### Server-Side validation
+
+By validating forms on the server, you can:
+- Ensure your data is in the expected format before sending it to your database.
+- Reduce the risk of malicious users bypassing client-side validation.
+- Have one source of truth for what is considered *valid* data.
+In your `create-form.tsx` component, import the `useFormState` hook from `react-dom`. Since `useFormState` is a hook, you will need to turn your form into a Client Component using `"use client"` directive:
+
+Inside your Form Component, the `useFormState` hook:
+
+Takes two arguments: `(action, initialState)`.
+Returns two values: `[state, dispatch]` - the form state, and a dispatch function (similar to [useReducer](https://react.dev/reference/react/useReducer))
+Pass your `createInvoice` action as an argument of `useFormState`, and inside your `<form action={}>` attribute, call `dispatch`.
+
+## Chapter 15 - Adding Authentication
+
+### What is authentication?
+Authentication is a key part of many web applications today. It's how a system checks if the user is who they say they are.
+
+A secure website often uses multiple ways to check a user's identity. For instance, after entering your username and password, the site may send a verification code to your device or use an external app like Google Authenticator. This 2-factor authentication (2FA) helps increase security. Even if someone learns your password, they can't access your account without your unique token.
+
+### Authentication vs. Authorization
+In web development, authentication and authorization serve different roles:
+
+- **Authentication** is about making sure the user is who they say they are. You're proving your identity with something you have like a username and password.
+- **Authorization** is the next step. Once a user's identity is confirmed, authorization decides what parts of the application they are allowed to use.
+
+So, authentication checks who you are, and authorization determines what you can do or access in the application.
+
+### NextAuth.js
+We will be using [NextAuth.js](https://nextjs.authjs.dev/) to add authentication to your application. NextAuth.js abstracts away much of the complexity involved in managing sessions, sign-in and sign-out, and other aspects of authentication. While you can manually implement these features, the process can be time-consuming and error-prone. NextAuth.js simplifies the process, providing a unified solution for auth in Next.js applications.
+
+### Setting up NextAuth.js
+Install NextAuth.js by running the following command in your terminal:
+```bash
+npm install next-auth@beta
+```
+Here, you're installing the beta version of NextAuth.js, which is compatible with Next.js 14.
+Next, generate a secret key for your application. This key is used to encrypt cookies, ensuring the security of user sessions. You can do this by running the following command in your terminal:
+```bash
+openssl rand -base64 32
+```
+Then, in your .env file, add your generated key to the AUTH_SECRET variable:
+``` json
+AUTH_SECRET=your-secret-key
+```
+For auth to work in production, you'll need to update your environment variables in your Vercel project too. Check out this [guide](https://vercel.com/docs/projects/environment-variables) on how to add environment variables on Vercel.
+
+#### Adding the pages option
+Create an `auth.config.ts` file at the root of our project that exports an `authConfig` object. This object will contain the configuration options for NextAuth.js. For now, it will only contain the `pages` option:
+``` javascript
+import type { NextAuthConfig } from 'next-auth';
+ 
+export const authConfig = {
+  pages: {
+    signIn: '/login',
+  },
+};
+```
+You can use the `pages` option to specify the route for custom sign-in, sign-out, and error pages. This is not required, but by adding `signIn: '/login'` into our `pages` option, the user will be redirected to our custom login page, rather than the NextAuth.js default page.
+
+#### Protecting your routes with Next.js Middleware
+Next, add the logic to protect your routes. This will prevent users from accessing the dashboard pages unless they are logged in.
+In file /auth.config.ts
+The authorized callback is used to verify if the request is authorized to access a page via Next.js Middleware. It is called before a request is completed, and it receives an object with the auth and request properties. The auth property contains the user's session, and the request property contains the incoming request.
+
+The providers option is an array where you list different login options. For now, it's an empty array to satisfy NextAuth config. You'll learn more about it in the Adding the Credentials provider section.
+
+Next, you will need to import the authConfig object into a Middleware file. In the root of your project, create a file called middleware.ts and paste the following code:
+In middleware.ts file you are:
+Here you're initializing NextAuth.js with the authConfig object and exporting the auth property. You're also using the matcher option from Middleware to specify that it should run on specific paths.
+
+The advantage of employing Middleware for this task is that the protected routes will not even start rendering until the Middleware verifies the authentication, enhancing both the security and performance of your application.
+
+#### Password hashing
+It's good practice to hash passwords before storing them in a database. Hashing converts a password into a fixed-length string of characters, which appears random, providing a layer of security even if the user's data is exposed.
+
+In your seed.js file, you used a package called bcrypt to hash the user's password before storing it in the database. You will use it again later in this chapter to compare that the password entered by the user matches the one in the database. However, you will need to create a separate file for the bcrypt package. This is because bcrypt relies on Node.js APIs not available in Next.js Middleware.
+
+Create a new file called auth.ts that spreads your authConfig object:
+
+#### Adding the Credentials provider
+Next, you will need to add the `providers` option for NextAuth.js. `providers` is an array where you list different login options such as Google or GitHub. For this course, we will focus on using the [Credentials provider](https://authjs.dev/getting-started/providers/credentials-tutorial) only.
+
+The Credentials provider allows users to log in with a username and a password.
+
+##### Good to know:
+
+Although we're using the Credentials provider, it's generally recommended to use alternative providers such as [OAuth](https://authjs.dev/getting-started/providers/oauth-tutorial) or [email](https://authjs.dev/getting-started/providers/email-tutorial) providers. See the [NextAuth.js docs](https://authjs.dev/getting-started/providers) for a full list of options.
+
+#### Adding the sign in functionality
+You can use the `authorize` function to handle the authentication logic. Similarly to Server Actions, you can use `zod` to validate the email and password before checking if the user exists in the database:
+
+#### Updating the login form
+Now you need to connect the auth logic with your login form. In your `actions.ts` file, create a new action called `authenticate`. This action should import the `signIn` function from `auth.ts`:
+
+## Chapter 16 - Adding Metadata
+Metadata is crucial for SEO and shareability. In this chapter, we'll discuss how you can add metadata to your Next.js application.
+
+### What is metadata?
+In web development, metadata provides additional details about a webpage. Metadata is not visible to the users visiting the page. Instead, it works behind the scenes, embedded within the page's HTML, usually within the `<head>` element. This hidden information is crucial for search engines and other systems that need to understand your webpage's content better.
+
+### Why is metadata important?
+Metadata plays a significant role in enhancing a webpage's SEO, making it more accessible and understandable for search engines and social media platforms. Proper metadata helps search engines effectively index webpages, improving their ranking in search results. Additionally, metadata like Open Graph improves the appearance of shared links on social media, making the content more appealing and informative for users.
+
+#### Types of metadata
+There are various types of metadata, each serving a unique purpose. Some common types include:
+
+**Title Metadata**: Responsible for the title of a webpage that is displayed on the browser tab. It's crucial for SEO as it helps search engines understand what the webpage is about.
+``` html
+<title>Page Title</title>
+```
+
+**Description Metadata**: This metadata provides a brief overview of the webpage content and is often displayed in search engine results.
+
+``` html
+<meta name="description" content="A brief description of the page content." />
+```
+
+**Keyword Metadata**: This metadata includes the keywords related to the webpage content, helping search engines index the page.
+``` html
+<meta name="keywords" content="keyword1, keyword2, keyword3" />
+```
+
+**Open Graph Metadata**: This metadata enhances the way a webpage is represented when shared on social media platforms, providing information such as the title, description, and preview image.
+
+``` html
+<meta property="og:title" content="Title Here" />
+<meta property="og:description" content="Description Here" />
+<meta property="og:image" content="image_url_here" />
+```
+
+**Favicon Metadata**: This metadata links the favicon (a small icon) to the webpage, displayed in the browser's address bar or tab.
+
+``` html
+<link rel="icon" href="path/to/favicon.ico" />
+```
+
+#### Adding metadata
+Next.js has a Metadata API that can be used to define your application metadata. There are two ways you can add metadata to your application:
+
+- **Config-based**: Export a static metadata object or a dynamic generateMetadata function in a `layout.js` or `page.js` file.
+- **File-based**: Next.js has a range of special files that are specifically used for metadata purposes:
+  - `favicon.ico`, `apple-icon.jpg`, and `icon.jpg`: Utilized for favicons and icons
+  - `opengraph-image.jpg` and `twitter-image.jpg`: Employed for social media images
+  - `robots.txt`: Provides instructions for search engine crawling
+  - `sitemap.xml`: Offers information about the website's structure
+  
+You have the flexibility to use these files for static metadata, or you can generate them programmatically within your project.
+
+With both these options, Next.js will automatically generate the relevant `<head>` elements for your pages.
+
+#### Favicon and Open Graph image
+In your `/public` folder, you'll notice you have two images: `favicon.ico` and `opengraph-image.jpg`.
+
+Move these images to the root of your `/app` folder.
+
+After doing this, Next.js will automatically identify and use these files as your favicon and OG image. You can verify this by checking the `<head>` element of your application in dev tools.
+> **Good to know**: You can also create dynamic OG images using the [ImageResponse](https://nextjs.org/docs/app/api-reference/functions/image-response) constructor.
+
+#### Page title and descriptions
+You can also include a [metadata object](https://nextjs.org/docs/app/api-reference/functions/generate-metadata#metadata-fields) from any `layout.js` or `page.js` file to add additional page information like title and description. Any metadata in `layout.js` will be inherited by all pages that use it.
+
+In your root layout, create a new `metadata` object with the following fields:
+``` javascript
+import { Metadata } from 'next';
+ 
+export const metadata: Metadata = {
+  title: 'Acme Dashboard',
+  description: 'The official Next.js Course Dashboard, built with App Router.',
+  metadataBase: new URL('https://next-learn-dashboard.vercel.sh'),
+};
+```
+Next.js will automatically add the title and metadata to your application.
